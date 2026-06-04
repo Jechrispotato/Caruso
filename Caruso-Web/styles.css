@@ -34,11 +34,14 @@ body {
     flex-direction: column;
     align-items: center;
     margin-bottom: 40px;
+    animation: centerToTop 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .logo-img {
     height: 50px;
     margin-bottom: 20px;
+    opacity: 0;
+    animation: simpleFadeIn 0.5s ease forwards;
 }
 
 .logo-text {
@@ -46,6 +49,8 @@ body {
     font-size: 36px;
     font-weight: 400;
     letter-spacing: 2px;
+    opacity: 0;
+    animation: simpleFadeIn 0.5s ease forwards 0.5s;
 }
 
 .main-content {
@@ -53,6 +58,28 @@ body {
     flex-direction: column;
     align-items: center;
     width: 100%;
+    opacity: 0;
+    animation: simpleFadeIn 0.5s ease forwards 2.5s;
+}
+
+@keyframes centerToTop {
+    0%, 80% {
+        transform: translateY(30vh);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes simpleFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .canvas-wrapper {

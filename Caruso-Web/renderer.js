@@ -46,14 +46,6 @@ function drawCanvas(exportContext = null, scaleFactor = 1) {
     
     // Draw bottom image
     drawSection(targetCtx, bottomState, 0, halfH, w, halfH, scaleFactor, 'Bottom Photo (1080 x 675)');
-    
-    // Draw flat separator line (black)
-    targetCtx.beginPath();
-    targetCtx.moveTo(0, halfH);
-    targetCtx.lineTo(w, halfH);
-    targetCtx.lineWidth = 4 * scaleFactor;
-    targetCtx.strokeStyle = '#000000';
-    targetCtx.stroke();
 }
 
 function drawSection(targetCtx, state, boxX, boxY, boxW, boxH, scaleFactor, placeholderText) {
@@ -89,6 +81,16 @@ function getMousePos(evt) {
     };
 }
 
+function getTouchPos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (evt.touches[0].clientX - rect.left) * scaleX,
+        y: (evt.touches[0].clientY - rect.top) * scaleY
+    };
+}
+
 canvas.addEventListener('mousedown', (e) => {
     const pos = getMousePos(e);
     if (pos.y < HALF_HEIGHT && topState.img) {
@@ -118,6 +120,42 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', () => {
+    isDragging = false;
+    activeState = null;
+});
+
+canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const pos = getTouchPos(e);
+    if (pos.y < HALF_HEIGHT && topState.img) {
+        activeState = topState;
+    } else if (pos.y >= HALF_HEIGHT && bottomState.img) {
+        activeState = bottomState;
+    } else {
+        return;
+    }
+    isDragging = true;
+    lastMouseX = pos.x;
+    lastMouseY = pos.y;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!isDragging || !activeState) return;
+    e.preventDefault(); // Prevent scrolling while dragging
+    if (e.touches.length !== 1) return;
+    const pos = getTouchPos(e);
+    const dx = pos.x - lastMouseX;
+    const dy = pos.y - lastMouseY;
+    
+    activeState.x += dx;
+    activeState.y += dy;
+    
+    lastMouseX = pos.x;
+    lastMouseY = pos.y;
+    drawCanvas();
+}, { passive: false });
+
+window.addEventListener('touchend', () => {
     isDragging = false;
     activeState = null;
 });
