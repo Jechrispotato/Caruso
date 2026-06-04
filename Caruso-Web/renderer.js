@@ -91,6 +91,27 @@ function drawCanvas(exportContext = null, scaleFactor = 1, skipPalette = false) 
     }
 }
 
+function getWrappedLines(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    let line = '';
+    const lines = [];
+
+    for(let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        
+        if (testWidth > maxWidth && n > 0) {
+            lines.push(line.trim());
+            line = words[n] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line.trim());
+    return lines;
+}
+
 function drawCaptions(ctx, scaleFactor) {
     if (!captionsState.active) return;
     
@@ -101,28 +122,41 @@ function drawCaptions(ctx, scaleFactor) {
     
     const w = CANVAS_WIDTH * scaleFactor;
     const h = CANVAS_HEIGHT * scaleFactor;
+    const lineHeight = 32 * scaleFactor;
     
-    let topX, topY, bottomX, bottomY;
+    let topX, topY, bottomX, bottomY, maxWidth;
     if (layoutStyle === 'horizontal') {
         topX = w / 2;
         topY = h / 2 - 40 * scaleFactor;
         bottomX = w / 2;
         bottomY = h - 40 * scaleFactor;
+        maxWidth = w * 0.9;
     } else {
         topX = w / 4;
         topY = h - 40 * scaleFactor;
         bottomX = (w / 4) * 3;
         bottomY = h - 40 * scaleFactor;
+        maxWidth = (w / 2) * 0.9;
     }
     
     if (captionsState.top.text) {
         ctx.fillStyle = captionsState.top.color;
-        ctx.fillText(captionsState.top.text, topX, topY);
+        const lines = getWrappedLines(ctx, captionsState.top.text, maxWidth);
+        let startY = topY - (lines.length - 1) * lineHeight;
+        lines.forEach(line => {
+            ctx.fillText(line, topX, startY);
+            startY += lineHeight;
+        });
     }
     
     if (captionsState.bottom.text) {
         ctx.fillStyle = captionsState.bottom.color;
-        ctx.fillText(captionsState.bottom.text, bottomX, bottomY);
+        const lines = getWrappedLines(ctx, captionsState.bottom.text, maxWidth);
+        let startY = bottomY - (lines.length - 1) * lineHeight;
+        lines.forEach(line => {
+            ctx.fillText(line, bottomX, startY);
+            startY += lineHeight;
+        });
     }
     
     ctx.restore();
@@ -238,38 +272,59 @@ function checkCaptionClick(pos) {
     ctx.save();
     ctx.font = '500 24px Inter, sans-serif';
     
-    let topX, topY, bottomX, bottomY;
+    let topX, topY, bottomX, bottomY, maxWidth;
     if (layoutStyle === 'horizontal') {
         topX = CANVAS_WIDTH / 2;
         topY = CANVAS_HEIGHT / 2 - 40;
         bottomX = CANVAS_WIDTH / 2;
         bottomY = CANVAS_HEIGHT - 40;
+        maxWidth = CANVAS_WIDTH * 0.9;
     } else {
         topX = CANVAS_WIDTH / 4;
         topY = CANVAS_HEIGHT - 40;
         bottomX = (CANVAS_WIDTH / 4) * 3;
         bottomY = CANVAS_HEIGHT - 40;
+        maxWidth = (CANVAS_WIDTH / 2) * 0.9;
     }
     
     const hitPadding = 30;
+    const lineHeight = 32;
     let clicked = null;
     
     if (captionsState.top.text) {
-        const topMetrics = ctx.measureText(captionsState.top.text);
-        if (pos.x >= topX - topMetrics.width / 2 - hitPadding &&
-            pos.x <= topX + topMetrics.width / 2 + hitPadding &&
-            pos.y >= topY - 20 - hitPadding &&
-            pos.y <= topY + 20 + hitPadding) {
+        const lines = getWrappedLines(ctx, captionsState.top.text, maxWidth);
+        let maxLineWidth = 0;
+        lines.forEach(line => {
+            const w = ctx.measureText(line).width;
+            if (w > maxLineWidth) maxLineWidth = w;
+        });
+        
+        const topEdge = topY - (lines.length - 1) * lineHeight - lineHeight / 2;
+        const bottomEdge = topY + lineHeight / 2;
+        
+        if (pos.x >= topX - maxLineWidth / 2 - hitPadding &&
+            pos.x <= topX + maxLineWidth / 2 + hitPadding &&
+            pos.y >= topEdge - hitPadding &&
+            pos.y <= bottomEdge + hitPadding) {
             clicked = 'top';
         }
     }
     
     if (!clicked && captionsState.bottom.text) {
-        const bottomMetrics = ctx.measureText(captionsState.bottom.text);
-        if (pos.x >= bottomX - bottomMetrics.width / 2 - hitPadding &&
-            pos.x <= bottomX + bottomMetrics.width / 2 + hitPadding &&
-            pos.y >= bottomY - 20 - hitPadding &&
-            pos.y <= bottomY + 20 + hitPadding) {
+        const lines = getWrappedLines(ctx, captionsState.bottom.text, maxWidth);
+        let maxLineWidth = 0;
+        lines.forEach(line => {
+            const w = ctx.measureText(line).width;
+            if (w > maxLineWidth) maxLineWidth = w;
+        });
+        
+        const topEdge = bottomY - (lines.length - 1) * lineHeight - lineHeight / 2;
+        const bottomEdge = bottomY + lineHeight / 2;
+        
+        if (pos.x >= bottomX - maxLineWidth / 2 - hitPadding &&
+            pos.x <= bottomX + maxLineWidth / 2 + hitPadding &&
+            pos.y >= topEdge - hitPadding &&
+            pos.y <= bottomEdge + hitPadding) {
             clicked = 'bottom';
         }
     }
