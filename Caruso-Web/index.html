@@ -21,11 +21,65 @@
         </header>
 
         <main class="main-content">
-            <div class="canvas-wrapper">
-                <canvas id="collage-canvas" width="1080" height="1350"></canvas>
-                <div class="upload-buttons">
-                    <button id="upload-top" class="circle-btn">+</button>
-                    <button id="upload-bottom" class="circle-btn">+</button>
+            <div class="canvas-area-wrapper" id="canvas-area-wrapper">
+                <div class="canvas-center">
+                    <div class="canvas-wrapper">
+                        <canvas id="collage-canvas" width="1080" height="1350"></canvas>
+                        <div class="upload-buttons">
+                            <button id="upload-top" class="circle-btn">+</button>
+                            <button id="upload-bottom" class="circle-btn">+</button>
+                        </div>
+                        <div class="edit-controls-vertical" id="edit-controls-vertical" style="opacity: 0; pointer-events: none;">
+                            <button id="btn-scale-down" class="icon-btn">-</button>
+                            <button id="btn-scale-up" class="icon-btn">+</button>
+                            <button id="btn-rotate-right" class="icon-btn">↻</button>
+                            <button id="btn-rotate-left" class="icon-btn">↺</button>
+                        </div>
+                    </div>
+                    <div class="edit-controls-pan" id="edit-controls-pan" style="opacity: 0; pointer-events: none;">
+                        <button id="btn-move-left" class="icon-btn">←</button>
+                        <button id="btn-move-down" class="icon-btn">↓</button>
+                        <button id="btn-move-up" class="icon-btn">↑</button>
+                        <button id="btn-move-right" class="icon-btn">→</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="canvas-size-menu" id="canvas-size-menu" style="display: none;">
+                <button class="size-pill active" data-size="1080x1350">1080 x 1350</button>
+                <button class="size-pill" data-size="1080x1080">1080 x 1080</button>
+                <button class="size-pill" data-size="1080x1920">1080 x 1920</button>
+                <button class="size-pill" data-size="1920x1080">1920 x 1080</button>
+            </div>
+
+            <div class="toolbar">
+                <div class="toolbar-item" id="btn-canvas">
+                    <button class="toolbar-btn">
+                        <img src="../Assets/crop-light.svg" alt="Canvas">
+                    </button>
+                    <span>Canvas</span>
+                </div>
+                
+                <div class="toolbar-item">
+                    <button id="btn-edit" class="toolbar-btn">
+                        <img src="../Assets/command-light.svg" alt="Edit">
+                    </button>
+                    <span>Edit</span>
+                </div>
+
+                <div class="toolbar-group">
+                    <div class="toolbar-item">
+                        <button id="btn-layout-h" class="toolbar-btn">
+                            <img src="../Assets/arrows-in-line-vertical-light.svg" alt="H">
+                        </button>
+                        <span>H</span>
+                    </div>
+                    <div class="toolbar-item">
+                        <button id="btn-layout-v" class="toolbar-btn">
+                            <img src="../Assets/arrows-in-line-horizontal-light.svg" alt="V">
+                        </button>
+                        <span>V</span>
+                    </div>
                 </div>
             </div>
 

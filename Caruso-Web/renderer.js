@@ -1,54 +1,57 @@
 const canvas = document.getElementById('collage-canvas');
 const ctx = canvas.getContext('2d');
 
-const CANVAS_WIDTH = 1080;
-const CANVAS_HEIGHT = 1350;
-const HALF_HEIGHT = CANVAS_HEIGHT / 2; // 675
+let CANVAS_WIDTH = 1080;
+let CANVAS_HEIGHT = 1350;
+let layoutStyle = 'horizontal'; // 'horizontal' or 'vertical'
 
 // State for top and bottom images
-const topState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, type: 'top' };
-const bottomState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, type: 'bottom' };
+const topState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, rotation: 0, type: 'top' };
+const bottomState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, rotation: 0, type: 'bottom' };
 
 let isDragging = false;
 let activeState = null;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
-function resetState(state, img, w, h) {
+function resetState(state, img, boxW, boxH) {
     state.img = img;
     const imgRatio = img.width / img.height;
-    const boxRatio = w / h;
+    const boxRatio = boxW / boxH;
     
     if (imgRatio > boxRatio) {
-        state.baseScale = h / img.height;
+        state.baseScale = boxH / img.height;
     } else {
-        state.baseScale = w / img.width;
+        state.baseScale = boxW / img.width;
     }
     
     state.scale = state.baseScale;
-    state.x = w / 2; // center
-    state.y = h / 2; // center
+    state.rotation = 0;
+    state.x = 0;
+    state.y = 0;
 }
 
-// Initial Draw
 function drawCanvas(exportContext = null, scaleFactor = 1) {
     const targetCtx = exportContext || ctx;
     const w = CANVAS_WIDTH * scaleFactor;
     const h = CANVAS_HEIGHT * scaleFactor;
-    const halfH = HALF_HEIGHT * scaleFactor;
 
     // Clear canvas
     targetCtx.fillStyle = '#FFFFFF';
     targetCtx.fillRect(0, 0, w, h);
     
-    // Draw top image
-    drawSection(targetCtx, topState, 0, 0, w, halfH, scaleFactor, 'Top Photo (1080 x 675)');
-    
-    // Draw bottom image
-    drawSection(targetCtx, bottomState, 0, halfH, w, halfH, scaleFactor, 'Bottom Photo (1080 x 675)');
+    if (layoutStyle === 'horizontal') {
+        const halfH = (CANVAS_HEIGHT / 2) * scaleFactor;
+        drawSection(targetCtx, topState, 0, 0, w, halfH, scaleFactor);
+        drawSection(targetCtx, bottomState, 0, halfH, w, halfH, scaleFactor);
+    } else {
+        const halfW = (CANVAS_WIDTH / 2) * scaleFactor;
+        drawSection(targetCtx, topState, 0, 0, halfW, h, scaleFactor);
+        drawSection(targetCtx, bottomState, halfW, 0, halfW, h, scaleFactor);
+    }
 }
 
-function drawSection(targetCtx, state, boxX, boxY, boxW, boxH, scaleFactor, placeholderText) {
+function drawSection(targetCtx, state, boxX, boxY, boxW, boxH, scaleFactor) {
     if (state.img) {
         targetCtx.save();
         targetCtx.beginPath();
@@ -58,11 +61,16 @@ function drawSection(targetCtx, state, boxX, boxY, boxW, boxH, scaleFactor, plac
         const renderW = state.img.width * state.scale * scaleFactor;
         const renderH = state.img.height * state.scale * scaleFactor;
         
-        // Calculate the draw position based on the center point (state.x, state.y are relative to the section's center)
-        const drawX = boxX + (state.x * scaleFactor) - (renderW / 2);
-        const drawY = boxY + (state.y * scaleFactor) - (renderH / 2);
+        const centerX = boxX + (boxW / 2);
+        const centerY = boxY + (boxH / 2);
         
-        targetCtx.drawImage(state.img, drawX, drawY, renderW, renderH);
+        const transX = centerX + (state.x * scaleFactor);
+        const transY = centerY + (state.y * scaleFactor);
+        
+        targetCtx.translate(transX, transY);
+        targetCtx.rotate(state.rotation);
+        
+        targetCtx.drawImage(state.img, -renderW / 2, -renderH / 2, renderW, renderH);
         targetCtx.restore();
     } else {
         targetCtx.fillStyle = state.type === 'top' ? '#EEEEEE' : '#E0E0E0';
@@ -70,7 +78,10 @@ function drawSection(targetCtx, state, boxX, boxY, boxW, boxH, scaleFactor, plac
     }
 }
 
-// Mouse interaction handling
+function setActiveState(state) {
+    activeState = state;
+}
+
 function getMousePos(evt) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -91,15 +102,23 @@ function getTouchPos(evt) {
     };
 }
 
+function getStateAtPos(pos) {
+    if (layoutStyle === 'horizontal') {
+        if (pos.y < CANVAS_HEIGHT / 2 && topState.img) return topState;
+        if (pos.y >= CANVAS_HEIGHT / 2 && bottomState.img) return bottomState;
+    } else {
+        if (pos.x < CANVAS_WIDTH / 2 && topState.img) return topState;
+        if (pos.x >= CANVAS_WIDTH / 2 && bottomState.img) return bottomState;
+    }
+    return null;
+}
+
 canvas.addEventListener('mousedown', (e) => {
     const pos = getMousePos(e);
-    if (pos.y < HALF_HEIGHT && topState.img) {
-        activeState = topState;
-    } else if (pos.y >= HALF_HEIGHT && bottomState.img) {
-        activeState = bottomState;
-    } else {
-        return;
-    }
+    const targetState = getStateAtPos(pos);
+    setActiveState(targetState);
+    if (!targetState) return;
+    
     isDragging = true;
     lastMouseX = pos.x;
     lastMouseY = pos.y;
@@ -121,19 +140,15 @@ canvas.addEventListener('mousemove', (e) => {
 
 window.addEventListener('mouseup', () => {
     isDragging = false;
-    activeState = null;
 });
 
 canvas.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
     const pos = getTouchPos(e);
-    if (pos.y < HALF_HEIGHT && topState.img) {
-        activeState = topState;
-    } else if (pos.y >= HALF_HEIGHT && bottomState.img) {
-        activeState = bottomState;
-    } else {
-        return;
-    }
+    const targetState = getStateAtPos(pos);
+    setActiveState(targetState);
+    if (!targetState) return;
+    
     isDragging = true;
     lastMouseX = pos.x;
     lastMouseY = pos.y;
@@ -141,7 +156,7 @@ canvas.addEventListener('touchstart', (e) => {
 
 canvas.addEventListener('touchmove', (e) => {
     if (!isDragging || !activeState) return;
-    e.preventDefault(); // Prevent scrolling while dragging
+    e.preventDefault(); 
     if (e.touches.length !== 1) return;
     const pos = getTouchPos(e);
     const dx = pos.x - lastMouseX;
@@ -157,18 +172,13 @@ canvas.addEventListener('touchmove', (e) => {
 
 window.addEventListener('touchend', () => {
     isDragging = false;
-    activeState = null;
 });
 
 canvas.addEventListener('wheel', (e) => {
-    e.preventDefault(); // Prevent page scrolling
+    e.preventDefault(); 
     const pos = getMousePos(e);
-    let targetState = null;
-    if (pos.y < HALF_HEIGHT && topState.img) {
-        targetState = topState;
-    } else if (pos.y >= HALF_HEIGHT && bottomState.img) {
-        targetState = bottomState;
-    }
+    const targetState = getStateAtPos(pos);
+    setActiveState(targetState);
     
     if (!targetState) return;
     
@@ -176,16 +186,13 @@ canvas.addEventListener('wheel', (e) => {
     const zoomFactor = e.deltaY < 0 ? (1 + zoomIntensity) : (1 - zoomIntensity);
     
     targetState.scale *= zoomFactor;
-    
-    // Prevent zooming out too much (smaller than min coverage baseScale)
     if (targetState.scale < targetState.baseScale * 0.1) {
-        targetState.scale = targetState.baseScale * 0.1; // allow zooming out to 10%
+        targetState.scale = targetState.baseScale * 0.1;
     }
     
     drawCanvas();
 }, { passive: false });
 
-// Handle file uploads
 function handleUpload(inputId, buttonId, isTop) {
     const input = document.getElementById(inputId);
     const button = document.getElementById(buttonId);
@@ -202,13 +209,18 @@ function handleUpload(inputId, buttonId, isTop) {
         reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
+                const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
+                const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
+                
                 if (isTop) {
-                    resetState(topState, img, CANVAS_WIDTH, HALF_HEIGHT);
+                    resetState(topState, img, boxW, boxH);
+                    setActiveState(topState);
                 } else {
-                    resetState(bottomState, img, CANVAS_WIDTH, HALF_HEIGHT);
+                    resetState(bottomState, img, boxW, boxH);
+                    setActiveState(bottomState);
                 }
                 drawCanvas();
-                button.style.opacity = '0'; // Hide the button but keep it clickable
+                button.style.opacity = '0';
             };
             img.src = event.target.result;
         };
@@ -219,6 +231,114 @@ function handleUpload(inputId, buttonId, isTop) {
 handleUpload('file-top', 'upload-top', true);
 handleUpload('file-bottom', 'upload-bottom', false);
 
+// Settings UI Controls
+document.getElementById('btn-canvas').addEventListener('click', () => {
+    const menu = document.getElementById('canvas-size-menu');
+    menu.style.display = menu.style.display === 'none' || menu.style.display === '' ? 'flex' : 'none';
+});
+
+document.querySelectorAll('.size-pill').forEach(pill => {
+    pill.addEventListener('click', (e) => {
+        document.querySelectorAll('.size-pill').forEach(p => p.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        const parts = e.target.getAttribute('data-size').split('x');
+        CANVAS_WIDTH = parseInt(parts[0]);
+        CANVAS_HEIGHT = parseInt(parts[1]);
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        
+        const wrapper = document.querySelector('.canvas-wrapper');
+        wrapper.style.aspectRatio = `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`;
+        
+        const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
+        const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
+        
+        if (topState.img) resetState(topState, topState.img, boxW, boxH);
+        if (bottomState.img) resetState(bottomState, bottomState.img, boxW, boxH);
+        
+        drawCanvas();
+        document.getElementById('canvas-size-menu').style.display = 'none';
+    });
+});
+
+function updateLayout(style) {
+    layoutStyle = style;
+    
+    const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
+    const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
+    
+    if (topState.img) resetState(topState, topState.img, boxW, boxH);
+    if (bottomState.img) resetState(bottomState, bottomState.img, boxW, boxH);
+    
+    if (activeState) setActiveState(activeState);
+    
+    const uploadButtons = document.querySelector('.upload-buttons');
+    if (layoutStyle === 'horizontal') {
+        uploadButtons.style.flexDirection = 'column';
+    } else {
+        uploadButtons.style.flexDirection = 'row';
+    }
+    
+    drawCanvas();
+}
+
+document.getElementById('btn-layout-h').addEventListener('click', () => updateLayout('horizontal'));
+document.getElementById('btn-layout-v').addEventListener('click', () => updateLayout('vertical'));
+
+// Edit button toggle
+document.getElementById('btn-edit').addEventListener('click', () => {
+    const pan = document.getElementById('edit-controls-pan');
+    const vert = document.getElementById('edit-controls-vertical');
+    const editBtnImg = document.querySelector('#btn-edit img');
+    const wrapper = document.getElementById('canvas-area-wrapper');
+    
+    if (pan.style.opacity === '0' || pan.style.opacity === '') {
+        pan.style.opacity = '1';
+        pan.style.pointerEvents = 'auto';
+        vert.style.opacity = '1';
+        vert.style.pointerEvents = 'auto';
+        wrapper.classList.add('editing');
+        // Add purple tint to Edit icon
+        editBtnImg.style.filter = 'invert(20%) sepia(80%) saturate(4000%) hue-rotate(260deg)';
+    } else {
+        pan.style.opacity = '0';
+        pan.style.pointerEvents = 'none';
+        vert.style.opacity = '0';
+        vert.style.pointerEvents = 'none';
+        wrapper.classList.remove('editing');
+        editBtnImg.style.filter = '';
+    }
+});
+
+// Image UI Controls
+document.getElementById('btn-scale-up').addEventListener('click', () => {
+    if (activeState) { activeState.scale *= 1.1; drawCanvas(); }
+});
+document.getElementById('btn-scale-down').addEventListener('click', () => {
+    if (activeState) { activeState.scale *= 0.9; drawCanvas(); }
+});
+document.getElementById('btn-rotate-left').addEventListener('click', () => {
+    if (activeState) { activeState.rotation -= Math.PI / 12; drawCanvas(); } // 15 degrees
+});
+document.getElementById('btn-rotate-right').addEventListener('click', () => {
+    if (activeState) { activeState.rotation += Math.PI / 12; drawCanvas(); }
+});
+
+const MOVE_STEP = 20;
+document.getElementById('btn-move-up').addEventListener('click', () => {
+    if (activeState) { activeState.y -= MOVE_STEP; drawCanvas(); }
+});
+document.getElementById('btn-move-down').addEventListener('click', () => {
+    if (activeState) { activeState.y += MOVE_STEP; drawCanvas(); }
+});
+document.getElementById('btn-move-left').addEventListener('click', () => {
+    if (activeState) { activeState.x -= MOVE_STEP; drawCanvas(); }
+});
+document.getElementById('btn-move-right').addEventListener('click', () => {
+    if (activeState) { activeState.x += MOVE_STEP; drawCanvas(); }
+});
+
 // Handle export
 document.getElementById('btn-export').addEventListener('click', async () => {
     if (!topState.img && !bottomState.img) {
@@ -226,21 +346,21 @@ document.getElementById('btn-export').addEventListener('click', async () => {
         return;
     }
     
-    const resolutionScale = parseFloat(document.getElementById('export-resolution').value);
+    let resolutionScale = 1;
+    const exportSelect = document.getElementById('export-resolution');
+    if (exportSelect) {
+        resolutionScale = parseFloat(exportSelect.value);
+    }
     
-    // Create an offscreen canvas for high-res export
     const exportCanvas = document.createElement('canvas');
     exportCanvas.width = CANVAS_WIDTH * resolutionScale;
     exportCanvas.height = CANVAS_HEIGHT * resolutionScale;
     const exportCtx = exportCanvas.getContext('2d');
     
-    // Draw at the new scale
     drawCanvas(exportCtx, resolutionScale);
     
-    // Get image data as base64 string
     const dataURL = exportCanvas.toDataURL('image/png');
     
-    // Create standard web download
     const link = document.createElement('a');
     link.download = 'Caruso.png';
     link.href = dataURL;
@@ -248,12 +368,12 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     link.click();
     document.body.removeChild(link);
     
-    // Flat success state
     const btn = document.getElementById('btn-export');
     const originalText = btn.textContent;
     btn.textContent = 'Saved!';
     setTimeout(() => { btn.textContent = originalText; }, 2000);
 });
 
-// Initial draw call
+// Setup Initial Canvas Aspect Ratio
+document.querySelector('.canvas-wrapper').style.aspectRatio = `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`;
 drawCanvas();
