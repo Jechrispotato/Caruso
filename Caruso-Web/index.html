@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Caruso</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="../Assets/Caruso%20Pwa%20Logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="../Assets/Caruso%20Pwa%20Logo.png">
+    <meta name="theme-color" content="#FFFFFF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Caruso">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <img src="../Assets/Caruso_logo.png" alt="Logo" class="logo-img">
+            <h1 class="logo-text">Caruso</h1>
+        </header>
+
+        <main class="main-content">
+            <div class="canvas-wrapper">
+                <canvas id="collage-canvas" width="1080" height="1350"></canvas>
+                <div class="upload-buttons">
+                    <button id="upload-top" class="circle-btn">+</button>
+                    <button id="upload-bottom" class="circle-btn">+</button>
+                </div>
+            </div>
+
+            <div class="separator">-------------------</div>
+
+            <button id="btn-export" class="export-btn">
+                <img src="../Assets/download-simple-light.svg" alt="Export">
+            </button>
+        </main>
+        
+        <div style="display: none;">
+            <input type="file" id="file-top" accept="image/*">
+            <input type="file" id="file-bottom" accept="image/*">
+            <select id="export-resolution" class="select-input">
+                <option value="1">Default (1080 x 1350)</option>
+                <option value="2">2K (2160 x 2700)</option>
+                <option value="4">4K (4320 x 5400)</option>
+            </select>
+        </div>
+    </div>
+    
+    <script src="renderer.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('ServiceWorker registered'))
+                    .catch(err => console.log('ServiceWorker registration failed: ', err));
+            });
+        }
+    </script>
+</body>
+</html>

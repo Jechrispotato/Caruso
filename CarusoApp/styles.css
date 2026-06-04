@@ -1,0 +1,148 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #FFFFF0; /* Yellowish white */
+    color: #000000; /* Black */
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+.sidebar {
+    width: 300px;
+    background-color: #FFFFFF; /* White */
+    border-right: 1px solid #CCCCCC; /* Grey border, flat */
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+}
+
+.sidebar-header {
+    margin-bottom: 32px;
+}
+
+.sidebar-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #000000;
+}
+
+.sidebar-header p {
+    font-size: 14px;
+    color: #555555; /* Dark grey */
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #000000;
+}
+
+.select-input {
+    padding: 10px;
+    font-size: 14px;
+    border: 2px solid #000000;
+    background-color: #FFFFFF;
+    color: #000000;
+    cursor: pointer;
+    border-radius: 0;
+    outline: none;
+}
+
+.select-input:focus {
+    background-color: #EEEEEE;
+}
+
+.btn {
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 0; /* Flat style, no rounded corners for ultra flat or maybe small 4px */
+    border: 2px solid #000000;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.primary-btn {
+    background-color: #FFFFFF;
+    color: #000000;
+}
+
+.primary-btn:hover {
+    background-color: #EEEEEE;
+}
+
+.export-btn {
+    background-color: #000000;
+    color: #FFFFFF;
+    border: 2px solid #000000;
+    margin-top: 20px;
+}
+
+.export-btn:hover {
+    background-color: #333333;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background-color: #FFFFF0;
+    overflow-y: auto;
+}
+
+.canvas-wrapper {
+    background-color: #FFFFFF;
+    border: 1px solid #CCCCCC;
+    /* Maintain 4:5 aspect ratio (1080x1350) */
+    /* Use fixed height that fits in screen, width scales accordingly */
+    height: 90vh;
+    width: calc(90vh * 0.8); /* 1080 / 1350 = 0.8 */
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: #E0E0E0; /* Grey background for empty canvas */
+    cursor: grab;
+}
+
+canvas:active {
+    cursor: grabbing;
+}
