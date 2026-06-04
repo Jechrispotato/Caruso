@@ -34,7 +34,7 @@
                             <button id="btn-scale-up" class="icon-btn">+</button>
                             <button id="btn-rotate-right" class="icon-btn">↻</button>
                             <button id="btn-rotate-left" class="icon-btn">↺</button>
-                            <button id="btn-use-live" class="icon-btn" style="font-size: 10px; font-weight: bold; margin-top: 10px;" title="Use Live Photo">LIVE</button>
+                            <button id="btn-change-photo" class="icon-btn" style="font-size: 10px; font-weight: bold; margin-top: 10px;" title="Change Photo">IMG</button>
                         </div>
                     </div>
                     <div class="edit-controls-pan" id="edit-controls-pan" style="opacity: 0; pointer-events: none;">
@@ -53,12 +53,18 @@
                 <button class="size-pill" data-size="1920x1080">1920 x 1080</button>
             </div>
 
-            <div class="toolbar">
+            <div class="toolbar" id="main-toolbar">
                 <div class="toolbar-item" id="btn-canvas">
                     <button class="toolbar-btn">
                         <img src="../Assets/crop-light.svg" alt="Canvas">
                     </button>
                     <span>Canvas</span>
+                </div>
+                <div class="toolbar-item" id="btn-addons">
+                    <button class="toolbar-btn">
+                        <img src="../Assets/palette-light.svg" alt="Add-ons">
+                    </button>
+                    <span>Add-ons</span>
                 </div>
                 
                 <div class="toolbar-item">
@@ -84,6 +90,29 @@
                 </div>
             </div>
 
+            <div class="toolbar" id="addons-toolbar" style="display: none;">
+                <div class="toolbar-item" id="btn-addons-back">
+                    <button class="toolbar-btn" style="font-size: 20px; font-weight: 300;">
+                        &lt;
+                    </button>
+                    <span>Back</span>
+                </div>
+                
+                <div class="toolbar-item" id="btn-caption">
+                    <button class="toolbar-btn">
+                        <img src="../Assets/chat-centered-text-light.svg" alt="Captions">
+                    </button>
+                    <span>Captions</span>
+                </div>
+                
+                <div class="toolbar-item" id="btn-palette">
+                    <button class="toolbar-btn">
+                        <img src="../Assets/paint-brush-broad-light.svg" alt="Pallete">
+                    </button>
+                    <span>Pallete</span>
+                </div>
+            </div>
+
             <div class="separator">-------------------</div>
 
             <button id="btn-export" class="export-btn">
@@ -99,6 +128,17 @@
                 <option value="2">2K (2160 x 2700)</option>
                 <option value="4">4K (4320 x 5400)</option>
             </select>
+        </div>
+        
+        <div id="caption-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <h3 style="font-family: 'Inter', sans-serif; font-weight: 500; margin-bottom: 15px;">Edit Caption</h3>
+                <input type="text" id="caption-input" class="caption-input" placeholder="Enter caption text...">
+                <div class="modal-buttons">
+                    <button id="btn-cancel-caption" class="modal-btn cancel">Cancel</button>
+                    <button id="btn-save-caption" class="modal-btn save">Save</button>
+                </div>
+            </div>
         </div>
     </div>
     
