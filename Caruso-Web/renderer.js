@@ -14,6 +14,10 @@ let activeState = null;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
+let isEditMode = false;
+let lastTapTime = 0;
+let lastTapState = null;
+
 let animationFrameId = null;
 
 function startRenderLoop() {
@@ -142,6 +146,20 @@ function getStateAtPos(pos) {
 canvas.addEventListener('mousedown', (e) => {
     const pos = getMousePos(e);
     const targetState = getStateAtPos(pos);
+    
+    if (targetState) {
+        const now = Date.now();
+        if (now - lastTapTime < 300 && targetState === lastTapState) {
+            const inputId = targetState.type === 'top' ? 'file-top' : 'file-bottom';
+            document.getElementById(inputId).click();
+            return;
+        }
+        lastTapTime = now;
+        lastTapState = targetState;
+    }
+    
+    if (!isEditMode) return;
+    
     setActiveState(targetState);
     if (!targetState) return;
     
@@ -172,6 +190,20 @@ canvas.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
     const pos = getTouchPos(e);
     const targetState = getStateAtPos(pos);
+    
+    if (targetState) {
+        const now = Date.now();
+        if (now - lastTapTime < 300 && targetState === lastTapState) {
+            const inputId = targetState.type === 'top' ? 'file-top' : 'file-bottom';
+            document.getElementById(inputId).click();
+            return;
+        }
+        lastTapTime = now;
+        lastTapState = targetState;
+    }
+    
+    if (!isEditMode) return;
+    
     setActiveState(targetState);
     if (!targetState) return;
     
@@ -201,6 +233,7 @@ window.addEventListener('touchend', () => {
 });
 
 canvas.addEventListener('wheel', (e) => {
+    if (!isEditMode) return;
     e.preventDefault(); 
     const pos = getMousePos(e);
     const targetState = getStateAtPos(pos);
@@ -339,6 +372,7 @@ document.getElementById('btn-edit').addEventListener('click', () => {
         vert.style.opacity = '1';
         vert.style.pointerEvents = 'auto';
         wrapper.classList.add('editing');
+        isEditMode = true;
         // Add purple tint to Edit icon
         editBtnImg.style.filter = 'invert(20%) sepia(80%) saturate(4000%) hue-rotate(260deg)';
     } else {
@@ -347,6 +381,7 @@ document.getElementById('btn-edit').addEventListener('click', () => {
         vert.style.opacity = '0';
         vert.style.pointerEvents = 'none';
         wrapper.classList.remove('editing');
+        isEditMode = false;
         editBtnImg.style.filter = '';
     }
 });
@@ -377,6 +412,43 @@ document.getElementById('btn-move-left').addEventListener('click', () => {
 });
 document.getElementById('btn-move-right').addEventListener('click', () => {
     if (activeState) { activeState.x += MOVE_STEP; drawCanvas(); }
+});
+
+// Live Photo Feature
+document.getElementById('btn-use-live').addEventListener('click', () => {
+    if (!activeState) return;
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const isVideo = file.type.startsWith('video/');
+        if (!isVideo) return;
+        
+        const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
+        const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
+        
+        const video = document.createElement('video');
+        video.src = URL.createObjectURL(file);
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.onloadedmetadata = () => {
+            video.play();
+            resetState(activeState, video, boxW, boxH, true);
+            
+            // Remove the plus button text/opacity since a file is present
+            const btnId = activeState.type === 'top' ? 'upload-top' : 'upload-bottom';
+            const uploadBtn = document.getElementById(btnId);
+            if (uploadBtn) uploadBtn.style.opacity = '0';
+            
+            startRenderLoop();
+        };
+    };
+    input.click();
 });
 
 // Handle export
