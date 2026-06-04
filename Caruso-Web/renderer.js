@@ -6,23 +6,46 @@ let CANVAS_HEIGHT = 1350;
 let layoutStyle = 'horizontal'; // 'horizontal' or 'vertical'
 
 // State for top and bottom images
-const topState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, rotation: 0, type: 'top' };
-const bottomState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, rotation: 0, type: 'bottom' };
+const topState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, rotation: 0, type: 'top', isVideo: false };
+const bottomState = { img: null, x: 0, y: 0, scale: 1, baseScale: 1, rotation: 0, type: 'bottom', isVideo: false };
 
 let isDragging = false;
 let activeState = null;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
-function resetState(state, img, boxW, boxH) {
+let animationFrameId = null;
+
+function startRenderLoop() {
+    if (!animationFrameId) {
+        function loop() {
+            drawCanvas();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+        loop();
+    }
+}
+
+function stopRenderLoop() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+}
+
+function resetState(state, img, boxW, boxH, isVideo = false) {
     state.img = img;
-    const imgRatio = img.width / img.height;
+    state.isVideo = isVideo;
+    const sourceW = isVideo ? img.videoWidth : img.width;
+    const sourceH = isVideo ? img.videoHeight : img.height;
+    
+    const imgRatio = sourceW / sourceH;
     const boxRatio = boxW / boxH;
     
     if (imgRatio > boxRatio) {
-        state.baseScale = boxH / img.height;
+        state.baseScale = boxH / sourceH;
     } else {
-        state.baseScale = boxW / img.width;
+        state.baseScale = boxW / sourceW;
     }
     
     state.scale = state.baseScale;
@@ -58,8 +81,11 @@ function drawSection(targetCtx, state, boxX, boxY, boxW, boxH, scaleFactor) {
         targetCtx.rect(boxX, boxY, boxW, boxH);
         targetCtx.clip();
         
-        const renderW = state.img.width * state.scale * scaleFactor;
-        const renderH = state.img.height * state.scale * scaleFactor;
+        const sourceW = state.isVideo ? state.img.videoWidth : state.img.width;
+        const sourceH = state.isVideo ? state.img.videoHeight : state.img.height;
+        
+        const renderW = sourceW * state.scale * scaleFactor;
+        const renderH = sourceH * state.scale * scaleFactor;
         
         const centerX = boxX + (boxW / 2);
         const centerY = boxY + (boxH / 2);
@@ -205,26 +231,40 @@ function handleUpload(inputId, buttonId, isTop) {
         const file = e.target.files[0];
         if (!file) return;
         
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
-                const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
-                
-                if (isTop) {
-                    resetState(topState, img, boxW, boxH);
-                    setActiveState(topState);
-                } else {
-                    resetState(bottomState, img, boxW, boxH);
-                    setActiveState(bottomState);
-                }
-                drawCanvas();
+        const isVideo = file.type.startsWith('video/');
+        const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
+        const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
+        
+        if (isVideo) {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.onloadedmetadata = () => {
+                video.play();
+                const state = isTop ? topState : bottomState;
+                resetState(state, video, boxW, boxH, true);
+                setActiveState(state);
                 button.style.opacity = '0';
+                startRenderLoop();
             };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
+        } else {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const state = isTop ? topState : bottomState;
+                    resetState(state, img, boxW, boxH, false);
+                    setActiveState(state);
+                    drawCanvas();
+                    button.style.opacity = '0';
+                    if (!topState.isVideo && !bottomState.isVideo) stopRenderLoop();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
     });
 }
 
@@ -254,8 +294,8 @@ document.querySelectorAll('.size-pill').forEach(pill => {
         const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
         const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
         
-        if (topState.img) resetState(topState, topState.img, boxW, boxH);
-        if (bottomState.img) resetState(bottomState, bottomState.img, boxW, boxH);
+        if (topState.img) resetState(topState, topState.img, boxW, boxH, topState.isVideo);
+        if (bottomState.img) resetState(bottomState, bottomState.img, boxW, boxH, bottomState.isVideo);
         
         drawCanvas();
         document.getElementById('canvas-size-menu').style.display = 'none';
@@ -268,8 +308,8 @@ function updateLayout(style) {
     const boxW = layoutStyle === 'horizontal' ? CANVAS_WIDTH : CANVAS_WIDTH / 2;
     const boxH = layoutStyle === 'horizontal' ? CANVAS_HEIGHT / 2 : CANVAS_HEIGHT;
     
-    if (topState.img) resetState(topState, topState.img, boxW, boxH);
-    if (bottomState.img) resetState(bottomState, bottomState.img, boxW, boxH);
+    if (topState.img) resetState(topState, topState.img, boxW, boxH, topState.isVideo);
+    if (bottomState.img) resetState(bottomState, bottomState.img, boxW, boxH, bottomState.isVideo);
     
     if (activeState) setActiveState(activeState);
     
@@ -342,10 +382,52 @@ document.getElementById('btn-move-right').addEventListener('click', () => {
 // Handle export
 document.getElementById('btn-export').addEventListener('click', async () => {
     if (!topState.img && !bottomState.img) {
-        alert('Please add at least one photo before exporting.');
+        alert('Please add at least one photo or video before exporting.');
         return;
     }
     
+    const btn = document.getElementById('btn-export');
+    const originalContent = btn.innerHTML;
+    
+    // Video export
+    if (topState.isVideo || bottomState.isVideo) {
+        btn.innerHTML = '<span style="color:white; font-family: Inter, sans-serif; font-size: 14px;">Recording...</span>';
+        
+        const stream = canvas.captureStream(30);
+        let mimeType = 'video/webm';
+        if (MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
+        
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+        const chunks = [];
+        
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunks.push(e.data);
+        };
+        
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ext = mimeType === 'video/mp4' ? 'mp4' : 'webm';
+            a.download = `Caruso_Collage.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            btn.innerHTML = '<span style="color:white; font-family: Inter, sans-serif; font-size: 14px;">Saved!</span>';
+            setTimeout(() => { btn.innerHTML = originalContent; }, 2000);
+        };
+        
+        mediaRecorder.start();
+        setTimeout(() => {
+            mediaRecorder.stop();
+        }, 4000); // 4-second recording
+        return;
+    }
+    
+    // Image export
     let resolutionScale = 1;
     const exportSelect = document.getElementById('export-resolution');
     if (exportSelect) {
@@ -362,16 +444,14 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     const dataURL = exportCanvas.toDataURL('image/png');
     
     const link = document.createElement('a');
-    link.download = 'Caruso.png';
+    link.download = 'Caruso_Collage.png';
     link.href = dataURL;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    const btn = document.getElementById('btn-export');
-    const originalText = btn.textContent;
-    btn.textContent = 'Saved!';
-    setTimeout(() => { btn.textContent = originalText; }, 2000);
+    btn.innerHTML = '<span style="color:white; font-family: Inter, sans-serif; font-size: 14px;">Saved!</span>';
+    setTimeout(() => { btn.innerHTML = originalContent; }, 2000);
 });
 
 // Setup Initial Canvas Aspect Ratio
